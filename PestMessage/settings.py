@@ -114,7 +114,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'pestSituation',
         'USER': 'root',
-        'PASSWORD': '123456798',
+        'PASSWORD': '*********',
         'HOST': 'localhost',
         'PORT': '3306',
     }
