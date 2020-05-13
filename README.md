@@ -6,3 +6,5 @@ Vue.js
 Django
 # 数据库
 mysql, redis
+---
+更新：优化了部分接口，规范了部分命名
