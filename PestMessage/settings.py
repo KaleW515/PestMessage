@@ -16,8 +16,8 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_ROOT = 'front/dist'
 
-SESSION_COOKIE_SAMESITE = None
-CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -50,15 +50,20 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    #  'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# WEBSOCKET_FACTORY_CLASS = 'dwebsocket.backends.uwsgi.factory.uWsgiWebSocketFactory'
 WEBSOCKET_ACCEPT_ALL = True
 ROOT_URLCONF = 'PestMessage.urls'
-BASE_URL = "http://127.0.0.1:8000"
+# BASE_URL = "http://192.168.0.104/"
+# BASE_IMG_URL = "http://192.168.0.104/message/api/"
+
+BASE_URL = "http://127.0.0.1:8000/"
+BASE_IMG_URL = "http://127.0.0.1:8000/"
 
 TEMPLATES = [
     {
@@ -114,7 +119,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'pestSituation',
         'USER': 'root',
-        'PASSWORD': '*********',
+        'PASSWORD': '123456798',
         'HOST': 'localhost',
         'PORT': '3306',
     }

@@ -1,11 +1,11 @@
-import json
-import time
-import random
-import rsa
 import base64
+import json
+import random
+import time
+
 import itsdangerous
 import requests
-from PestMessage import settings
+import rsa
 from captcha.helpers import captcha_image_url
 from captcha.models import CaptchaStore
 from django.contrib.auth import authenticate, hashers, login, logout
@@ -14,7 +14,9 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django_redis import get_redis_connection
 from dwebsocket.decorators import accept_websocket
+
 from PestApp import models
+from PestMessage import settings
 
 
 # Create your views here.
@@ -47,7 +49,7 @@ def check_token(func):
 
 class Captcha:
     @staticmethod
-    def refreshCaptcha(request):
+    def refresh_captcha(request):
         hashKey = CaptchaStore.generate_key()
         image_url = captcha_image_url(hashKey)
         return JsonResponse({'hashKey': hashKey, 'imageUrl': image_url}, safe=False)
@@ -74,7 +76,7 @@ def verify_captcha(func):
 
 @check_token
 @login_required
-def getNewMsg(request):
+def new_msg(request):
     url = 'https://c.m.163.com/ug/api/wuhan/app/data/list-total?t=1581959283780'
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.106 Safari/537.36',
@@ -108,97 +110,61 @@ def getNewMsg(request):
 class RetImg:
     @staticmethod
     @login_required
-    def retImg(request):
+    def ret_img(request):
         imgId = request.GET.get('id')
         img = open('templates/Files/images/cover/img' + imgId + '.jpeg', 'rb')
         return HttpResponse(img.read(), content_type='image/bmp')
 
 
-class ReplyRelation:
-    @staticmethod
-    @check_token
-    @login_required
-    def writerReply(request):
-        conn = get_redis_connection()
-        content = request.POST.get('content')
-        commentsId = int(request.POST.get('commentsId'))
-        date = request.POST.get('date')
-        keyWordsList = models.KeyWords.objects.all().values_list()
-        for item in keyWordsList:
-            if item[1] in content:
-                return JsonResponse({'msg': '含有屏蔽关键字'}, safe=False)
-        try:
-            phoneNumber = request.user.phoneNumber
-            name = request.user.username
-            models.Reply.objects.create(from_phonenumber=phoneNumber, to_commentsid=commentsId, from_name=name,
-                                        date=date,
-                                        content=content)
-            response = {
-                'msg': '评论成功',
-                'name': name,
-            }
-            thePhoneNum = models.Comments.objects.get(id=commentsId).from_phonenumber
-            conn.hincrby('Info:' + thePhoneNum, 'NRep')
-            return JsonResponse(response, safe=False)
-        except:
-            return JsonResponse({'msg': '你还没登录啊'}, safe=False)
+class Reply:
 
     @staticmethod
     @check_token
     @login_required
-    def watchReply(request):
-        commentsId = int(request.POST.get('commentsId'))
-        ls = []
-        try:
-            result = models.Reply.objects.filter(to_commentsid=commentsId).values()
-            for item in result:
-                item['avaUrl'] = settings.BASE_URL + '/getCommentsAva?username=' + item['from_name']
-                ls.append(item)
-            p = Paginator(ls, len(ls))
-            pageNow = p.page(1).object_list
-            return JsonResponse(pageNow, safe=False)
-        except:
-            return JsonResponse({'msg': '没有回复'}, safe=False)
+    def reply(request):
+        if request.method == 'POST':
+            conn = get_redis_connection()
+            content = request.POST.get('content')
+            commentsId = int(request.POST.get('commentsId'))
+            date = request.POST.get('date')
+            keyWordsList = models.KeyWords.objects.all().values_list()
+            for item in keyWordsList:
+                if item[1] in content:
+                    return JsonResponse({'msg': '含有屏蔽关键字'}, safe=False)
+            try:
+                phoneNumber = request.user.phoneNumber
+                name = request.user.username
+                models.Reply.objects.create(from_phonenumber=phoneNumber, to_commentsid=commentsId, from_name=name,
+                                            date=date,
+                                            content=content)
+                response = {
+                    'msg': '评论成功',
+                    'name': name,
+                }
+                thePhoneNum = models.Comments.objects.get(id=commentsId).from_phonenumber
+                conn.hincrby('Info:' + thePhoneNum, 'NRep')
+                return JsonResponse(response, safe=False)
+            except:
+                return JsonResponse({'msg': '你还没登录啊'}, safe=False)
 
-    @staticmethod
-    @check_token
-    @login_required
-    def watchMyReply(request):
-        conn = get_redis_connection()
-        if request.GET.get('phoneNumber') is not None:
-            phoneNumber = request.GET.get('phoneNumber')
-        else:
-            phoneNumber = request.user.phoneNumber
-        ls = []
-        result = models.Comments.objects.filter(from_phonenumber=phoneNumber).values()
-        for item in result:
-            item['reply'] = []
-            item['inputIsShow'] = False
-            item['replyIsShow'] = False
-            item['avaUrl'] = settings.BASE_URL + '/getCommentsAva?username=' + item['name']
-            ls.append(item)
-        p = Paginator(ls, 5)
-        conn.hset('Info:' + phoneNumber, 'NRep', 0)
-        conn.hset('Info:' + phoneNumber, 'NLike', 0)
-        conn.hset('Info:' + phoneNumber, 'NDLike', 0)
-        if request.method == 'GET':
-            pageNow = p.page(1).object_list
-            return JsonResponse({'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow}, safe=False)
-        elif request.method == 'POST':
-            currentPage = request.POST.get('currentPage')
-            if int(currentPage) > p.num_pages:
-                return JsonResponse({'msg': '已经没有啦', 'pageCount': str(p.num_pages)}, safe=False)
-            else:
-                pageNow = p.page(int(currentPage)).object_list
-                return JsonResponse({'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow}, safe=False)
+        elif request.method == 'GET':
+            commentsId = int(request.GET.get('commentsId'))
+            ls = []
+            try:
+                result = models.Reply.objects.filter(to_commentsid=commentsId).values()
+                for item in result:
+                    item['avaUrl'] = settings.BASE_IMG_URL + 'people_ava/' + item['from_name']
+                    ls.append(item)
+                p = Paginator(ls, len(ls))
+                pageNow = p.page(1).object_list
+                return JsonResponse(pageNow, safe=False)
+            except:
+                return JsonResponse({'msg': '没有回复'}, safe=False)
 
-    @staticmethod
-    @check_token
-    @login_required
-    def delMyReply(request):
-        replyId = int(request.GET.get('id'))
-        models.Reply.objects.filter(id=replyId).delete()
-        return JsonResponse({'msg': '成功'}, safe=False)
+        elif request.method == 'DELETE':
+            replyId = int(request.GET.get('id'))
+            models.Reply.objects.filter(id=replyId).delete()
+            return JsonResponse({'msg': '成功'}, safe=False)
 
 
 class LikeAndDisLike:
@@ -206,7 +172,7 @@ class LikeAndDisLike:
     @staticmethod
     @check_token
     @login_required
-    def incLikeNum(request):
+    def inc_like_num(request):
         commentsId = int(request.POST.get('commentsId'))
         phoneNumber = request.user.phoneNumber
         conn = get_redis_connection()
@@ -224,7 +190,7 @@ class LikeAndDisLike:
     @staticmethod
     @check_token
     @login_required
-    def incDisLikeNum(request):
+    def inc_dislike_num(request):
         commentsId = int(request.POST.get('commentsId'))
         phoneNumber = request.user.phoneNumber
         conn = get_redis_connection()
@@ -245,92 +211,93 @@ class Comments:
     @staticmethod
     @check_token
     @login_required
-    def watchComments(request):
-        ls = []
-        value = request.POST.get('value')
-        result = models.Comments.objects.all().values()
-        for item in result:
-            item['reply'] = []
-            item['inputIsShow'] = False
-            item['replyIsShow'] = False
-            item['avaUrl'] = settings.BASE_URL + '/getCommentsAva?username=' + item['name']
-            ls.append(item)
-        if value == 'true':
-            ls = sorted(ls, key=lambda ls: ls["likenum"], reverse=True)
-        else:
-            ls.reverse()
-        p = Paginator(ls, 10)
-        pageNow = p.page(1).object_list
-        return JsonResponse(
-            {'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow, 'username': request.user.username},
-            safe=False)
-
-    @staticmethod
-    @check_token
-    @login_required
-    def watchMoreComments(request):
-        currentPage = request.POST.get('currentPage')
-        value = request.POST.get('value')
-        ls = []
-        result = models.Comments.objects.all().values()
-        for item in result:
-            item['reply'] = []
-            item['inputIsShow'] = False
-            item['replyIsShow'] = False
-            item['avaUrl'] = settings.BASE_URL + '/getCommentsAva?username=' + item['name']
-            ls.append(item)
-        if value == 'true':
-            ls = sorted(ls, key=lambda ls: ls["likenum"], reverse=True)
-        else:
-            ls.reverse()
-        p = Paginator(ls, 10)
-        if int(currentPage) > p.num_pages:
-            return JsonResponse({'msg': '已经没有啦', 'pageCount': str(p.num_pages)}, safe=False)
-        else:
-            pageNow = p.page(int(currentPage)).object_list
-            return JsonResponse({'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow}, safe=False)
-
-    @staticmethod
-    @check_token
-    @login_required
-    def deleteMyComments(request):
-        commentId = request.POST.get('commentId')
-        try:
-            models.Comments.objects.filter(id=commentId).delete()
-            models.Reply.objects.filter(to_commentsid=commentId).delete()
-            return JsonResponse({'msg': '成功'}, safe=False)
-        except:
-            return JsonResponse({'msg': '删除失败'}, safe=False)
-
-    @staticmethod
-    @check_token
-    @login_required
-    def searchComments(request):
-        field = request.POST.get('inputField')
-        if field is not None:
-            result = models.Comments.objects.all().values()
+    def personal_comments(request):
+        if request.method == 'POST':
+            conn = get_redis_connection()
+            if request.POST.get('phoneNumber') is not None:
+                phoneNumber = request.POST.get('phoneNumber')
+            else:
+                phoneNumber = request.user.phoneNumber
             ls = []
+            result = models.Comments.objects.filter(from_phonenumber=phoneNumber).values()
             for item in result:
-                if field in item['content']:
+                item['reply'] = []
+                item['inputIsShow'] = False
+                item['replyIsShow'] = False
+                item['avaUrl'] = settings.BASE_IMG_URL + 'people_ava/' + item['name']
+                ls.append(item)
+            p = Paginator(ls, 5)
+            conn.hset('Info:' + phoneNumber, 'NRep', 0)
+            conn.hset('Info:' + phoneNumber, 'NLike', 0)
+            conn.hset('Info:' + phoneNumber, 'NDLike', 0)
+            currentPage = request.POST.get('currentPage')
+            if int(currentPage) > p.num_pages:
+                return JsonResponse({'msg': '已经没有啦', 'pageCount': str(p.num_pages)}, safe=False)
+            else:
+                pageNow = p.page(int(currentPage)).object_list
+                return JsonResponse({'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow}, safe=False)
+
+        elif request.method == 'DELETE':
+            commentId = request.GET.get('commentId')
+            try:
+                models.Comments.objects.filter(id=commentId).delete()
+                models.Reply.objects.filter(to_commentsid=commentId).delete()
+                return JsonResponse({'msg': '成功'}, safe=False)
+            except:
+                return JsonResponse({'msg': '删除失败'}, safe=False)
+
+    @staticmethod
+    @check_token
+    @login_required
+    def comments(request):
+        if request.method == 'POST':
+            field = request.POST.get('inputField')
+            if field is not None:
+                result = models.Comments.objects.all().values()
+                ls = []
+                for item in result:
+                    if field in item['content']:
+                        item['reply'] = []
+                        item['inputIsShow'] = False
+                        item['replyIsShow'] = False
+                        item['avaUrl'] = settings.BASE_IMG_URL + 'people_ava/' + item['name']
+                        ls.append(item)
+                p = Paginator(ls, len(ls))
+                pageNow = p.page(1).object_list
+                response = {
+                    'msg': '成功',
+                    'pageNow': pageNow,
+                }
+                return JsonResponse(response, safe=False)
+            else:
+                value = request.POST.get('value')
+                currentPage = request.POST.get('currentPage')
+                ls = []
+                result = models.Comments.objects.all().values()
+                for item in result:
                     item['reply'] = []
                     item['inputIsShow'] = False
                     item['replyIsShow'] = False
-                    item['avaUrl'] = settings.BASE_URL + '/getCommentsAva?username=' + item['name']
+                    item['avaUrl'] = settings.BASE_IMG_URL + 'people_ava/' + item['name']
                     ls.append(item)
-            p = Paginator(ls, len(ls))
-            pageNow = p.page(1).object_list
-            response = {
-                'msg': '成功',
-                'pageNow': pageNow,
-            }
-            return JsonResponse(response, safe=False)
-        else:
-            Comments.watchComments(request)
+                if value == 'true':
+                    ls = sorted(ls, key=lambda ls: ls["likenum"], reverse=True)
+                else:
+                    ls.reverse()
+                p = Paginator(ls, 10)
+                if int(currentPage) > p.num_pages:
+                    return JsonResponse({'msg': '已经没有啦', 'pageCount': str(p.num_pages)}, safe=False)
+                else:
+                    pageNow = p.page(int(currentPage)).object_list
+                    return JsonResponse(
+                        {'msg': '成功', 'pageCount': str(p.num_pages), 'pageNow': pageNow,
+                         'username': request.user.username},
+                        safe=False)
 
     @staticmethod
     @check_token
     @login_required
-    def writerMessage(request):
+    def writer_message(request):
         conn = get_redis_connection()
         myComments = request.POST.get('myComments')
         date = request.POST.get('date')
@@ -353,58 +320,44 @@ class Avatar:
 
     @staticmethod
     @login_required
-    def getCommentsAva(request):
-        username = request.GET.get('username')
-        try:
-            img = open('templates/Files/images/' + username + '.jpeg', 'rb')
-        except:
-            img = open('templates/Files/images/9fb206a48683c9cc152534d3fe27bd95.jpeg', 'rb')
-        return HttpResponse(img.read(), content_type='image/bmp')
+    def people_ava(request, username):
+        if request.method == 'GET':
+            try:
+                img = open('templates/Files/images/' + username + '.jpeg', 'rb')
+            except:
+                img = open('templates/Files/images/9fb206a48683c9cc152534d3fe27bd95.jpeg', 'rb')
+            return HttpResponse(img.read(), content_type='image/bmp')
 
     @staticmethod
     @login_required
-    def getVolLogo(request):
+    def vol_logo(request):
         img = open('templates/Files/images/vounteerLOgo.png', 'rb')
         return HttpResponse(img.read(), content_type='image/bmp')
 
     @staticmethod
-    @check_token
-    @login_required
-    def saveMyAva(request):
-        pic = request.FILES.getlist('file')
-        username = request.user.username
-        for item in pic:
-            for i in item.chunks():
-                fileName = username + '.jpeg'
-                with open('templates/Files/images/' + fileName, 'wb') as f:
-                    f.write(i)
-        return JsonResponse({'msg': 'success'}, safe=False)
-
-    @staticmethod
-    @login_required
-    def getOtherAva(request):
-        username = request.GET.get('username')
-        try:
-            img = open('templates/Files/images/' + username + '.jpeg', 'rb')
-        except:
-            img = open('templates/Files/images/9fb206a48683c9cc152534d3fe27bd95.jpeg', 'rb')
-        return HttpResponse(img.read(), content_type='image/bmp')
-
-    @staticmethod
-    @login_required
-    def getMyAva(request):
-        username = request.user.username
-        try:
-            img = open('templates/Files/images/' + username + '.jpeg', 'rb')
-        except:
-            img = open('templates/Files/images/9fb206a48683c9cc152534d3fe27bd95.jpeg', 'rb')
-        return HttpResponse(img.read(), content_type='image/bmp')
+    def my_ava(request):
+        if request.method == 'GET':
+            username = request.user.username
+            try:
+                img = open('templates/Files/images/' + username + '.jpeg', 'rb')
+            except:
+                img = open('templates/Files/images/9fb206a48683c9cc152534d3fe27bd95.jpeg', 'rb')
+            return HttpResponse(img.read(), content_type='image/bmp')
+        elif request.method == 'POST':
+            pic = request.FILES.getlist('file')
+            username = request.user.username
+            for item in pic:
+                for i in item.chunks():
+                    fileName = username + '.jpeg'
+                    with open('templates/Files/images/' + fileName, 'wb') as f:
+                        f.write(i)
+            return JsonResponse({'msg': 'success'}, safe=False)
 
 
 class LoginOut:
     @staticmethod
     @verify_captcha
-    def userLogin(request):
+    def user_login(request):
         phoneNumber = request.POST.get('phoneNumber')
         password = request.POST.get('password')
         password = base64.b64decode(bytes(password, encoding='utf8'))
@@ -441,7 +394,7 @@ class LoginOut:
             return JsonResponse({'msg': '没有你的账户'}, safe=False)
 
     @staticmethod
-    def userRegister(request):
+    def user_register(request):
         if request.method == 'POST':
             username = request.POST.get('username')
             phoneNumber = request.POST.get('phoneNumber')
@@ -460,12 +413,12 @@ class LoginOut:
     @staticmethod
     @check_token
     @login_required
-    def logoutView(request):
+    def logout_view(request):
         logout(request)
         return JsonResponse({'msg': '退出成功'}, safe=False)
 
     @staticmethod
-    def createSalt(request):
+    def salt(request):
         salt = ''
         chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789'
         for i in range(6):
@@ -493,10 +446,10 @@ class UserInfo:
     @staticmethod
     @check_token
     @login_required
-    def getMyInfo(request):
+    def my_info(request):
         conn = get_redis_connection()
         phoneNumber = request.user.phoneNumber
-        response = UserInfo.retPeopleInfo(phoneNumber)
+        response = UserInfo.ret_people_info(phoneNumber)
         try:
             newReplyNum = int(conn.hget('Info:' + phoneNumber, 'NRep').decode('utf-8'))
         except:
@@ -517,15 +470,14 @@ class UserInfo:
     @staticmethod
     @check_token
     @login_required
-    def getOtherInfo(request):
-        phoneNumber = request.GET.get('phoneNumber')
+    def people_info(request, phoneNumber):
         username = request.user.username
-        response = UserInfo.retPeopleInfo(phoneNumber)
+        response = UserInfo.ret_people_info(phoneNumber)
         response['data']['myName'] = username
         return JsonResponse(response, safe=False)
 
     @staticmethod
-    def retPeopleInfo(phoneNumber):
+    def ret_people_info(phoneNumber):
         conn = get_redis_connection()
         username = models.UserInfoView.objects.get(phoneNumber=phoneNumber).username
         try:
@@ -562,7 +514,7 @@ class UserInfo:
     @staticmethod
     @check_token
     @login_required
-    def mySignatureRevise(request):
+    def signature(request):
         phoneNumber = request.user.phoneNumber
         signature = request.POST.get('value')
         models.UserInfo.objects.filter(phoneNumber=phoneNumber).update(signature=signature)
@@ -571,7 +523,7 @@ class UserInfo:
     @staticmethod
     @check_token
     @login_required
-    def toBeVolunteer(request):
+    def volunteer(request):
         username = request.POST.get('name')
         phoneNumber = request.POST.get('phoneNumber')
         qq = request.POST.get('qq')
@@ -594,7 +546,7 @@ class UserInfo:
     @staticmethod
     @check_token
     @login_required
-    def getDonation(request):
+    def donation(request):
         username = request.POST.get('name')
         phoneNumber = request.POST.get('phoneNumber')
         maskNum = request.POST.get('maskNum')
@@ -608,7 +560,7 @@ class UserInfo:
 
 
 @accept_websocket
-def pushMsg(request):
+def push_msg(request, username):
     conn = get_redis_connection()
     phoneNumber = request.user.phoneNumber
     if request.is_websocket():
@@ -638,4 +590,3 @@ def pushMsg(request):
                 request.websocket.send(msg)
             except:
                 pass
-
