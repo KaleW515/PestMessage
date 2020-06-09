@@ -13,7 +13,6 @@ const Volunteer = () => import('../components/Volunteer');
 const Donation = () => import('../components/Donation');
 const MessageBoard = () => import('../components/MessageBoard');
 const MyPage = () => import('../components/MyPage');
-const RevisePwd = () => import('../components/RevisePwd');
 const PutMessage = () => import('../components/PutMessage');
 const routes = [
     {
@@ -61,11 +60,6 @@ const routes = [
                 path: '/my-page',
                 name: 'MyPage',
                 component: MyPage,
-            },
-            {
-                path: '/revise-pwd',
-                name: 'RevisePwd',
-                component: RevisePwd,
             },
             {
                 path: '/put-message',

@@ -4,10 +4,13 @@
             <el-header id="header">个人信息</el-header>
             <el-main>
                 <div id="myMessage">
+                    <div>
+                        <el-link icon="el-icon-edit" style="position: absolute; right: 20px" :underline="false" @click="dialogFormVisible = true">修改密码
+                        </el-link>
+                    </div>
                     <el-tooltip content="点击此处上传头像,为不影响视觉效果,请尽量上传宽高比一致的图像" placement="bottom" effect="light">
                         <el-upload
                                 class="avatar-uploader"
-                                :action="uploadUrl"
                                 :show-file-list="false"
                                 :on-success="handleAvatarSuccess"
                                 :before-upload="beforeAvatarUpload">
@@ -22,19 +25,22 @@
                         <el-divider></el-divider>
                     </div>
                     <el-tooltip content="点击此处修改签名" placement="bottom" effect="light">
-                <span v-text="'签名: '+signature" @click="changeMySignature()"
+                <span v-text="'签名: '" @click="changeMySignature()"
                       style="cursor: pointer; outline: none"></span>
                     </el-tooltip>
+                    <span v-text="signature" style="margin-left: 60px"></span>
                     <el-divider></el-divider>
-                    <span v-text="'姓名: '+name"></span>
+                    <span v-text="'姓名: '"></span>
+                    <span v-text="name" style="margin-left: 60px"></span>
                     <el-divider></el-divider>
-                    <span v-text="'联系电话: '+phoneNumber"></span>
+                    <span v-text="'留言数: '"></span>
+                    <span v-text="MessageNum" style="margin-left: 80px"></span>
                     <el-divider></el-divider>
-                    <span v-text="'留言数: '+MessageNum"></span>
+                    <span v-text="'收到的赞: '"></span>
+                    <span v-text="likeNum" style="margin-left: 70px"></span>
                     <el-divider></el-divider>
-                    <span v-text="'收到的赞: '+likeNum"></span>
-                    <el-divider></el-divider>
-                    <span v-text="'收到的踩: '+disLikeNum"></span>
+                    <span v-text="'收到的踩: '"></span>
+                    <span v-text="disLikeNum" style="margin-left: 75px"></span>
                     <el-divider></el-divider>
                     <el-badge :value="newLikeNum" :max="99" class="item">
                         <el-button size="small" @click="openMyMessageReply()">新的赞</el-button>
@@ -95,18 +101,48 @@
                 </div>
             </el-main>
         </el-container>
+        <el-dialog title="修改密码" :visible.sync="dialogFormVisible">
+            <el-form ref="reviseForm" :model="reviseForm" :rules="rules" label-width="80px">
+                <el-form-item label="旧密码" prop="oldPwd" class="pwd-input">
+                    <el-input type="password" placeholder="请输入原始密码" v-model="reviseForm.oldPwd" auto-complete="off"/>
+                </el-form-item>
+                <el-form-item label="新密码" prop="newPwd" class="pwd-input">
+                    <el-input type="password" placeholder="请输入新密码" v-model="reviseForm.newPwd" auto-complete="off"/>
+                </el-form-item>
+                <el-form-item label="重复密码" prop="checkNewPwd" class="pwd-input">
+                    <el-input type="password" placeholder="请重复新密码" v-model="reviseForm.checkNewPwd"
+                              auto-complete="off"/>
+                </el-form-item>
+                <el-form-item style="margin-left: 50%;transform: translate(-40%, 0%)">
+                    <el-button type="primary" style="margin-right: 50px"
+                               @click="reviseSub('reviseForm')">提交
+                    </el-button>
+                    <el-button @click="resetForm('reviseForm')">重置
+                    </el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
     </div>
 </template>
 
 <script>
     import {mapMutations} from 'vuex';
+    import crypto from "crypto";
 
     export default {
         name: "MyPage",
         data() {
+            let validatePwd = (rule, value, callback) => {
+                if (value === "") {
+                    callback(new Error("请再次输入密码"));
+                } else if (value !== this.reviseForm.newPwd) {
+                    callback(new Error("两次输入密码不一致!"));
+                } else {
+                    callback();
+                }
+            };
             return {
                 name: '',
-                uploadUrl: axios.defaults.baseURL + '/my_ava',
                 imageUrl: axios.defaults.baseURL + '/my_ava',
                 phoneNumber: '',
                 signature: '',
@@ -122,6 +158,24 @@
                 myMessageIsShow: false,
                 isVolunteer: false,
                 message: [],
+                dialogFormVisible: false,
+                reviseForm: {
+                    oldPwd: "",
+                    newPwd: "",
+                    checkNewPwd: "",
+                },
+                rules: {
+                    oldPwd: [
+                        {required: true, message: "请输入原密码", trigger: "blur"},
+                    ],
+                    newPwd: [
+                        {required: true, message: "请输入新密码", trigger: "blur"},
+                    ],
+                    checkNewPwd: [
+                        {required: true, message: "请重复新密码", trigger: "blur"},
+                        {validator: validatePwd, trigger: "blur"},
+                    ],
+                },
             };
         },
         methods: {
@@ -142,7 +196,60 @@
                         },
                     );
             },
-
+            reviseSub(formName) {
+                let that = this;
+                this.$refs[formName].validate((valid) => {
+                    if (valid) {
+                        let formData = new FormData();
+                        let md5 = crypto.createHash("md5");
+                        md5.update(this.reviseForm.oldPwd);
+                        let oldPwd = md5.digest('hex');
+                        let newMd5 = crypto.createHash("md5");
+                        newMd5.update(this.reviseForm.newPwd);
+                        let newPwd = newMd5.digest('hex');
+                        formData.append('oldPwd', oldPwd);
+                        formData.append('newPwd', newPwd);
+                        this.axios({
+                            method: 'post',
+                            url: '/revise',
+                            data: formData,
+                        })
+                            .then((response) => {
+                                let msg = response.data.msg;
+                                if (msg === '修改成功') {
+                                    that.$message({
+                                        message: msg + ',去重新登录吧',
+                                        type: 'success'
+                                    });
+                                    that.outLogin();
+                                    that.$router.push('/Login');
+                                } else {
+                                    this.$message.error(msg);
+                                }
+                            })
+                            .catch((error) => {
+                                console.log(error);
+                            });
+                    } else {
+                        this.dialogVisible = true;
+                        return false;
+                    }
+                });
+            },
+            outLogin() {
+                localStorage.clear();
+                axios.get('/logout')
+                    .then(function (response) {
+                            console.log(response);
+                        },
+                        function (err) {
+                            console.log(err);
+                        });
+                this.$router.push('/Login');
+            },
+            resetForm(formName) {
+                this.$refs[formName].resetFields();
+            },
             handleCurrentChange(val = 1) {
                 this.currentPage = val;
                 let that = this;
@@ -286,6 +393,7 @@
                 } else {
                     let fd = new FormData();
                     fd.append('file', file);
+                    fd.append("fileName", file.name)
                     axios.post('/my_ava', fd)
                         .then(function (response) {
                             _this.$message.success('上传成功');

@@ -6,11 +6,11 @@
                 <div id="volunteer">
                     <el-form :model="volunteerForm" :rules="rules" ref="ruleForm" label-width="100px"
                              class="demo-ruleForm">
-                        <el-form-item label="姓名" prop="name">
-                            <el-input v-model="volunteerForm.name"></el-input>
-                        </el-form-item>
-                        <el-form-item label="联系电话" prop="phoneNumber">
-                            <el-input v-model="volunteerForm.phoneNumber"></el-input>
+<!--                        <el-form-item label="姓名" prop="name">-->
+<!--                            <el-input v-model="volunteerForm.name"></el-input>-->
+<!--                        </el-form-item>-->
+                        <el-form-item label="联系电话" prop="phone">
+                            <el-input v-model="volunteerForm.phone"></el-input>
                         </el-form-item>
                         <el-form-item label="QQ" prop="qq">
                             <el-input v-model="volunteerForm.qq"></el-input>
@@ -65,8 +65,8 @@
         data() {
             return {
                 volunteerForm: {
-                    name: '',
-                    phoneNumber: '',
+                    // name: '',
+                    phone: '',
                     qq: '',
                     date1: '',
                     date2: '',
@@ -78,7 +78,7 @@
                     name: [
                         {required: true, message: '请输入姓名', trigger: 'blur'},
                     ],
-                    phoneNumber: [
+                    phone: [
                         {required: true, message: '请输入联系电话', trigger: 'blur'},
                         {min: 11, max: 11, message: '长度为11个字符', trigger: 'blur'}
                     ],

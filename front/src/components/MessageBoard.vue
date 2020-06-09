@@ -19,7 +19,7 @@
             </div>
             <el-main>
                 <div :key="item" class="text item" v-for="item in message">
-                    <el-card class="box-card">
+                    <el-card class="box-card" shadow="hover">
                         <div class="clearfix" slot="header" style="padding-bottom: 50px;position: relative">
 
                             <div class="block" @click="watchOtherPeople(item)">

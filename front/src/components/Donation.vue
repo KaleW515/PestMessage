@@ -6,12 +6,9 @@
                 <div id="donation">
                     <el-form :model="donateForm" :rules="rules" ref="ruleForm" label-width="100px"
                              class="demo-ruleForm">
-                        <el-form-item label="姓名" prop="name">
-                            <el-input v-model="donateForm.name"></el-input>
-                        </el-form-item>
 
-                        <el-form-item label="联系电话" prop="phoneNumber">
-                            <el-input v-model="donateForm.phoneNumber"></el-input>
+                        <el-form-item label="联系电话" prop="phone">
+                            <el-input v-model="donateForm.phone"></el-input>
                         </el-form-item>
 
                         <el-form-item label="捐赠口罩" prop="maskNum">
@@ -56,8 +53,7 @@
         data() {
             return {
                 donateForm: {
-                    name: '',
-                    phoneNumber: '',
+                    phone: '',
                     maskNum: 0,
                     proSuitNum: 0,
                     alcoholNum: 0,
@@ -68,7 +64,7 @@
                     name: [
                         {required: true, message: '请输入姓名', trigger: 'blur'},
                     ],
-                    phoneNumber: [
+                    phone: [
                         {required: true, message: '请输入联系电话', trigger: 'blur'},
                         {min: 11, max: 11, message: '长度为11个字符', trigger: 'blur'},
                     ],

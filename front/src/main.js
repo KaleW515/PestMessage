@@ -4,7 +4,8 @@ import App from './App.vue';
 import router from './router';
 import store from './store';
 import './plugins/element.js';
-import './plugins/love';
+// import './plugins/love';
+import './plugins/maodian'
 
 Vue.config.productionTip = false;
 

@@ -42,7 +42,6 @@
                             </template>
                             <el-menu-item-group>
                                 <el-menu-item index="2-1" @click="go_myPage">我的主页</el-menu-item>
-                                <el-menu-item index="2-2" @click="go_revisePwd">修改密码</el-menu-item>
                                 <el-menu-item index="2-3" @click="go_putMessage">我有话说</el-menu-item>
                                 <el-menu-item index="2-4" @click="outLogin">退出系统</el-menu-item>
                             </el-menu-item-group>

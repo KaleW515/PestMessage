@@ -1,14 +1,14 @@
 <template>
     <div>
-        <el-form ref="loginForm" :model="loginForm" :rules="rules" label-width="80px" class="login-box" @keyup.enter.native="onSubmit('loginForm')">
+        <el-form ref="loginForm" :model="loginForm" :rules="rules" label-width="80px" class="login-box">
             <h3 class="login-title">欢迎登录</h3>
-            <el-form-item label="账号" prop="phoneNumber" class="item-input">
-                <el-input type="text" placeholder="请输入账号" v-model="loginForm.phoneNumber" auto-complete="off"/>
+            <el-form-item label="账号" prop="username" class="item-input">
+                <el-input type="text" placeholder="请输入账号" v-model="loginForm.username" auto-complete="off"/>
             </el-form-item>
             <el-form-item label="密码" prop="password" class="item-input">
                 <el-input type="password" placeholder="请输入密码" v-model="loginForm.password" auto-complete="off"/>
             </el-form-item>
-            <el-form-item label="验证码" prop="captcha">
+            <el-form-item label="验证码" prop="captcha" @keyup.enter.native="onSubmit('loginForm')">
                 <el-row>
                     <el-col :span="12">
                         <el-input type="text" placeholder="请输入验证码" v-model="loginForm.captcha" auto-complete="off"/>
@@ -52,15 +52,14 @@
                 captchaUrl: '',
                 captchaHashKey: '',
                 loginForm: {
-                    phoneNumber: '',
+                    username: '',
                     password: '',
                     captcha: '',
                 },
                 userToken: '',
                 rules: {
-                    phoneNumber: [
+                    username: [
                         {required: true, message: '账号不可为空', trigger: 'blur'},
-                        {min: 11, max: 11, message: "长度必须为11个字符", trigger: "blur"},
                     ],
                     password: [
                         {required: true, message: '密码不可为空', trigger: 'blur'},
@@ -100,7 +99,7 @@
                                 let password = md5.digest('hex');
                                 password += that.salt;
                                 password = jse.encrypt(password);
-                                formData.append('phoneNumber', that.loginForm.phoneNumber);
+                                formData.append('username', that.loginForm.username);
                                 formData.append('password', password);
                                 formData.append('captcha', that.loginForm.captcha);
                                 formData.append('captchaHashKey', that.captchaHashKey);
